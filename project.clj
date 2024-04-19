@@ -6,4 +6,5 @@
   :dependencies [[org.clojure/clojure "1.11.1"]]
   :source-paths ["src/clj"]
   :java-source-paths ["src/java"]
+  :aot :all
   :repl-options {:init-ns timeacc.core})
