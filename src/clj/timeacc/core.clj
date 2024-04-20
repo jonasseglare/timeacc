@@ -47,6 +47,12 @@
                        (str element padding)
                        (str padding element)))))))))
 
+(defmacro measure [acc & body]
+  `(let [start-ns# (System/nanoTime)
+         result# (do ~@body)]
+     (accumulate-nano-seconds-since ~acc start-ns#)
+     result#))
+
 (defn report [^Root r]
   (->> r
        acc-map
@@ -62,14 +68,13 @@
 
 (defn demo []
   (let [root (root)
-        start-ns (System/nanoTime)
         a (unsafe-acc root :search-batch-fn)
         b (unsafe-acc root :backend-xform)]
-    (dotimes [_ 100]
-      (let [x (System/nanoTime)]
-        (Thread/sleep 10)
-        (accumulate-nano-seconds-since a x)))
-    (accumulate-nano-seconds-since b start-ns)
+    (measure b
+      (dotimes [_ 100]
+        (let [x (System/nanoTime)]
+          (Thread/sleep 10)
+          (accumulate-nano-seconds-since a x))))
     (report root)))
 
 (comment
