@@ -1,4 +1,5 @@
 (ns timeacc.core
+  (:require [clojure.string :as str])
   (:import [timeacc Root IAcc]))
 
 (defn root []
@@ -31,15 +32,45 @@
         (remove (fn [[_ v]] (zero? (counter v))))
         (.getAccMap r)))
 
+(defn render-table [rows]
+  (let [col-widths-f (fn [& elements]
+                     (apply max (map count elements)))
+        col-widths (apply map col-widths-f rows)]
+    (str/join "\n"
+              (for [row rows]
+                (str/join
+                 "   "
+                 (for [[i col-width element] (map vector (range) col-widths row)]
+                   (let [padw (- col-width (count element))
+                         padding (apply str (repeat padw " "))]
+                     (if (zero? i)
+                       (str element padding)
+                       (str padding element)))))))))
+
 (defn report [^Root r]
-  (println "Key                Counter    Total (s)   Average (s)")
-  (println "=============== ========== ============ =============")
-  (doseq [[k v] (sort-by key (acc-map r))]
-    (println (format "%s %24d %12.6f %12.6f"
-                     (name k)
-                     (counter v)
-                     (total-time-seconds v)
-                     (avg-time-seconds v)))))
+  (->> r
+       acc-map
+       (sort-by key)
+       (into [["KEY" "COUNTER" "TOTAL (s)" "AVERAGE (s)"]]
+             (map (fn [[k v]]
+                    [(name k)
+                     (format "%d" (counter v))
+                     (format "%.6f" (total-time-seconds v))
+                     (format "%.6f" (avg-time-seconds v))])))
+       render-table
+       println))
+
+(defn demo []
+  (let [root (root)
+        start-ns (System/nanoTime)
+        a (unsafe-acc root :search-batch-fn)
+        b (unsafe-acc root :backend-xform)]
+    (dotimes [_ 100]
+      (let [x (System/nanoTime)]
+        (Thread/sleep 10)
+        (accumulate-nano-seconds-since a x)))
+    (accumulate-nano-seconds-since b start-ns)
+    (report root)))
 
 (comment
 
