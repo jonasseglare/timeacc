@@ -1,6 +1,6 @@
 (ns timeacc.core
   (:require [clojure.string :as str])
-  (:import [timeacc Root IAcc]))
+  (:import [timeacc Root IAcc StopWatch]))
 
 (defn root []
   (Root.))
@@ -53,6 +53,15 @@
      (accumulate-nano-seconds-since ~acc start-ns#)
      result#))
 
+(defn stop-watch [^IAcc acc]
+  (StopWatch. acc))
+
+(defn start [^StopWatch w]
+  (.start w))
+
+(defn stop [^StopWatch w]
+  (.stop w))
+
 (defn report [^Root r]
   (->> r
        acc-map
@@ -83,6 +92,12 @@
   (def acc (unsafe-acc the-root :a))
   (def start (System/nanoTime))
   (accumulate-nano-seconds-since acc start)
+
+  (def the-watch (stop-watch acc))
+  (start the-watch)
+  (stop the-watch)
+
+  (report the-root)
 
   (reset the-root)
 
