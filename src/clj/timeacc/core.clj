@@ -62,6 +62,43 @@
 (defn stop [^StopWatch w]
   (.stop w))
 
+(defmacro with-pause [watch & expr]
+  `(let [_# (stop ~watch)
+         result# (do ~@expr)]
+     (start ~watch)
+     result#))
+
+(defmacro with-watch [watch & expr]
+  #_`(let [_ (start ~watch)
+         result# (do ~@expr)]
+     (stop ~watch)
+     result#))
+
+(defn measure-xform [acc xform]
+  (let [w (stop-watch acc)]
+    (fn [step]
+      (let [timed-step (fn
+                         ([] (with-pause w (step)))
+                         ([a] (with-pause w (step a)))
+                         ([a b] (with-pause w (step a b)))
+                         ([a b c] (with-pause w (step a b c)))
+                         ([a b c d] (with-pause w (step a b c d)))
+                         ([a b c d e] (with-pause w (step a b c d e)))
+                         ([a b c d e f] (with-pause w (step a b c d e f)))
+                         ([a b c d e f g] (with-pause w (step a b c d e f g)))
+                         ([a b c d e f g h] (with-pause w (step a b c d e f g h))))
+            new-step (xform timed-step)]
+        (fn
+          ([] (with-watch w (new-step)))
+          ([a] (with-watch w (new-step a)))
+          ([a b] (with-watch w (new-step a b)))
+          ([a b c] (with-watch w (new-step a b c)))
+          ([a b c d] (with-watch w (new-step a b c d)))
+          ([a b c d e] (with-watch w (new-step a b c d e)))
+          ([a b c d e f] (with-watch w (new-step a b c d e f)))
+          ([a b c d e f g] (with-watch w (new-step a b c d e f g)))
+          ([a b c d e f g h] (with-watch w (new-step a b c d e f g h))))))))
+
 (defn report [^Root r]
   (->> r
        acc-map
@@ -84,6 +121,21 @@
         (let [x (System/nanoTime)]
           (Thread/sleep 10)
           (accumulate-nano-seconds-since a x))))
+    (report root)))
+
+(defn xform-demo []
+  (let [root (root)
+        a (unsafe-acc root :search-batch-fn)
+        b (unsafe-acc root :backend-xform)
+        result (into []
+                     (comp (measure-xform a (map (fn [x]
+                                                   (Thread/sleep 100)
+                                                   (* x 2))))
+                           (measure-xform b (map (fn [x]
+                                                   (Thread/sleep 100)
+                                                   (inc x)))))
+                     [1 2 3 4 5])]
+    (println "Result" result)
     (report root)))
 
 (comment
