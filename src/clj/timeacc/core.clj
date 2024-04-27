@@ -139,6 +139,16 @@
     (println "Result" result)
     (report root)))
 
+(defmacro defn-measured [acc-expr fname args & body]
+  {:pre [(seq? acc-expr)
+         (symbol? fname)
+         (vector? args)]}
+  (let [acc (gensym)]
+    `(do (def ~acc (~@acc-expr ~(keyword fname)))
+         (defn ~fname ~args
+           (measure ~acc
+                    ~@body)))))
+
 (comment
 
   (def the-root (root))
